@@ -51,7 +51,8 @@ filtered_df = scan_and_filter_index_duckdb(
 
 save_filtered_index_if_small(
     filtered_df,
-    output_path=output_path_parquet
+    output_path=output_path_parquet,
+    max_gb=1.0
 )
 
 ### Load previously saved filtered index

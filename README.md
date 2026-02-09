@@ -2,6 +2,16 @@
 
 Query Common Crawl data efficiently using the columnar (Parquet) index instead of downloading entire WET files.
 
+> ## Related CC-News Datasets on Hugging Face
+>
+> Before building a custom CC-MAIN pipeline, you may also consider existing curated datasets:
+>
+> - [vblagoje/cc_news](https://huggingface.co/datasets/vblagoje/cc_news) – A cleaned and structured subset of CC News articles.
+> - [intfloat/multilingual_cc_news](https://huggingface.co/datasets/intfloat/multilingual_cc_news) – A multilingual version of CC News.
+> - [stanford-oval/ccnews](https://huggingface.co/datasets/stanford-oval/ccnews) – Stanford OVAL’s processed CC News dataset.
+>
+> These datasets provide ready-to-use news corpora, while this repository focuses on building custom corpora directly from raw CC-MAIN index + WARC files.
+
 ## Why Use the Parquet Index?
 
 | Old Approach | New Approach (Parquet Index) |
@@ -59,6 +69,7 @@ The parquet index includes:
 - [Browse crawl data](https://data.commoncrawl.org/crawl-data/index.html)
 
 ## Output of an example run
+```text
 Fetching parquet paths from: https://data.commoncrawl.org/crawl-data/CC-MAIN-2024-10/cc-index-table.paths.gz
 Found 300 parquet files for warc subset
 Will scan first 2 files for keyword 'immigrant'
@@ -85,9 +96,10 @@ Extracting text from 10 WARC records...
 Fetching WARC records: 100%|████████████████████████████████████████████████████████████████████████████████████████████| 10/10 [00:12<00:00,  1.23s/it]
 ============================================================
 Saved 10 text files to: filtered_data/text_content
-
+```
 
 ## Example of one text_content
+```text
 URL: https://dpi.wi.gov/english-learners/immigrants-and-refugees/immigrant-children
 Domain: wi.gov
 Language: eng
@@ -138,3 +150,4 @@ or (608) 266-1570.
 [ii] Academic Year need not be consecutive.
 [iii] ESSA definition of English Learner plus citation.
 [iv] ESEA 20 U.S.C. § 3114(e)(1)
+```

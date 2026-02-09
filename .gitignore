@@ -1,9 +1,9 @@
-# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
 *filtered_data
 *filtered_data/filtered_data
+.DS_Store
 
 # C extensions
 *.so

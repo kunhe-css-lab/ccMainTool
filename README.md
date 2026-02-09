@@ -1,6 +1,7 @@
 # Common Crawl Parquet Index Query
 
 Query Common Crawl data efficiently using the columnar (Parquet) index instead of downloading entire WET files.
+---
 
 > ## Related CC-News Datasets on Hugging Face
 >

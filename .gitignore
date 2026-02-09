@@ -4,6 +4,7 @@ __pycache__/
 *filtered_data
 *filtered_data/filtered_data
 .DS_Store
+*.parquet
 
 # C extensions
 *.so

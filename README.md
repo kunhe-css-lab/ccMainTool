@@ -35,7 +35,7 @@ Query Common Crawl data efficiently using the columnar (Parquet) index instead o
 ## Installation
 
 ```bash
-pip install pyarrow pandas requests warcio fsspec
+pip install pyarrow pandas requests warcio fsspec duckdb
 ```
 
 ## Usage

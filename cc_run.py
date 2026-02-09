@@ -1,7 +1,7 @@
 from ccTool import (
     get_warc_parquet_paths,
     resolve_num_parquet_files,
-    scan_and_filter_index,
+    scan_and_filter_index_duckdb,
     save_filtered_index_if_small,
     load_filtered_index,
     save_text_content
@@ -11,7 +11,7 @@ from ccTool import (
 # Configuration
 # -----------------------------
 CRAWL = "CC-MAIN-2024-10"  # Change to your desired crawl
-KEYWORD = r"immigrant|immigration"  # Keyword to search for in URLs, use Regular Expression to allow combination
+KEYWORDS = ["immigrant", "immigration"]  # List of keywords to match in URL (case-insensitive)
 SCAN_ALL_PARQUET = False  # Set to True to scan ALL parquet files
 NUM_PARQUET_FILES = 1     # Number of parquet to scan if SCAN_ALL_PARQUET = False
 
@@ -39,12 +39,12 @@ NUM_PARQUET_FILES = resolve_num_parquet_files(
     warc_paths,
     SCAN_ALL_PARQUET,
     NUM_PARQUET_FILES,
-    KEYWORD
+    KEYWORDS
 )
 
-filtered_df = scan_and_filter_index(
+filtered_df = scan_and_filter_index_duckdb(
     warc_paths,
-    keyword=KEYWORD,
+    keywords=KEYWORDS,
     num_parquet_files=NUM_PARQUET_FILES,
     columns_to_read=COLUMNS_TO_READ,
 )

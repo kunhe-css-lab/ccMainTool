@@ -7,7 +7,7 @@ import gzip
 import os
 from bs4 import BeautifulSoup
 from tqdm import tqdm
-
+import duckdb
 
 # ============================================================
 # Step 1: Get the list of parquet files from cc-index-table.paths.gz
@@ -27,73 +27,95 @@ def get_warc_parquet_paths(crawl: str):
     return warc_parquet_paths
 
 
-def resolve_num_parquet_files(warc_parquet_paths, scan_all_parquet: bool, num_parquet_files: int, keyword: str):
+def resolve_num_parquet_files(
+    warc_parquet_paths,
+    scan_all_parquet: bool,
+    num_parquet_files: int,
+    keywords: list,
+):
     """
-    Decide how many parquet shards to scan (all vs first N).
+    Decide how many parquet shards to scan (all vs first N)
+    and print summary information.
     """
+
+    keyword_str = ", ".join(keywords)
+
     if scan_all_parquet:
         num_parquet_files = len(warc_parquet_paths)
-        print(f"Will scan ALL {num_parquet_files} files for keyword '{keyword}'")
+        print(f"Will scan ALL {num_parquet_files} files for keywords: [{keyword_str}]")
     else:
-        print(f"Will scan first {num_parquet_files} files for keyword '{keyword}'")
-    return num_parquet_files
+        print(f"Will scan first {num_parquet_files} files for keywords: [{keyword_str}]")
 
+    return num_parquet_files
 
 # ============================================================
 # Step 2 + 3: Read parquet files and filter
 # ============================================================
-def scan_and_filter_index(
+
+def scan_and_filter_index_duckdb(
     warc_parquet_paths,
     *,
-    keyword: str,
+    keywords: list,
     num_parquet_files: int,
     columns_to_read,
 ):
     """
-    Read parquet index shards and filter by keyword (regex), English, and HTML.
-    Returns a filtered DataFrame (metadata only).
+    Scan selected Common Crawl Parquet shards using DuckDB and filter at query level.
+
+    Parameters
+    ----------
+    warc_parquet_paths : list
+        List of parquet shard paths (relative paths from CC index).
+    keywords : list[str]
+        List of keywords to match in URL (case-insensitive).
+    num_parquet_files : int
+        Number of parquet shards to scan.
+    columns_to_read : list
+        Columns to select from parquet index.
+
+    Returns
+    -------
+    pd.DataFrame
+        Filtered metadata DataFrame.
     """
-    all_filtered = []
 
-    for i, parquet_path in enumerate(tqdm(warc_parquet_paths[:num_parquet_files], desc="Scanning parquet files")):
-        https_url = f"https://data.commoncrawl.org/{parquet_path}"
+    # Build full HTTPS URLs
+    parquet_urls = [
+        f"https://data.commoncrawl.org/{p}"
+        for p in warc_parquet_paths[:num_parquet_files]
+    ]
 
-        try:
-            df = pd.read_parquet(
-                https_url,
-                columns=columns_to_read,
-                engine='pyarrow'
-            )
+    # Convert URL list into SQL array
+    url_list_sql = "[" + ",".join([f"'{u}'" for u in parquet_urls]) + "]"
 
-            # Filter: URL contains keyword (case-insensitive)
-            mask_keyword = df['url'].str.contains(keyword, case=False, na=False, regex=True)
+    cols_sql = ", ".join(columns_to_read)
 
-            # Filter: English content (content_languages contains 'eng')
-            mask_english = df['content_languages'].str.contains('eng', case=False, na=False)
+    # Build OR condition for keywords
+    # If you want AND logic instead, replace " OR " with " AND ".
+    keyword_conditions = " OR ".join(
+        [f"url ILIKE '%{k}%'" for k in keywords]
+    )
 
-            # Filter: HTML content only
-            mask_html = df['content_mime_type'] == 'text/html'
+    query = f"""
+    SELECT {cols_sql}
+    FROM read_parquet({url_list_sql})
+    WHERE ({keyword_conditions})
+      AND content_languages ILIKE '%eng%'
+      AND content_mime_type = 'text/html'
+    """
 
-            # Combine filters
-            filtered = df[mask_keyword & mask_english & mask_html]
+    con = duckdb.connect(database=":memory:")
 
-            if len(filtered) > 0:
-                all_filtered.append(filtered)
-                tqdm.write(f"  [{i+1}/{num_parquet_files}] Found {len(filtered)} matches")
+    # Convert via Arrow first to avoid pandas chained-assignment FutureWarning in some versions
+    arrow_tbl = con.execute(query).arrow()
+    df = arrow_tbl.to_pandas()
 
-        except Exception as e:
-            tqdm.write(f"  [{i+1}/{num_parquet_files}] Error: {e}")
-            continue
-
-    if all_filtered:
-        filtered_df = pd.concat(all_filtered, ignore_index=True)
-    else:
-        filtered_df = pd.DataFrame(columns=columns_to_read)
+    con.close()
 
     print(f"\n{'='*60}")
-    print(f"TOTAL: {len(filtered_df)} matching records across {num_parquet_files} parquet files")
-    return filtered_df
+    print(f"TOTAL: {len(df)} matching records across {num_parquet_files} parquet files (DuckDB)")
 
+    return df
 
 # ============================================================
 # Step 4: Check size and save if < 1GB

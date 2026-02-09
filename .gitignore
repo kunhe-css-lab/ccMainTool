@@ -2,6 +2,8 @@
 __pycache__/
 *.py[codz]
 *$py.class
+*filtered_data
+*filtered_data/filtered_data
 
 # C extensions
 *.so
